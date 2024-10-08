@@ -22,8 +22,8 @@ Model Training Master Program
 
 def main(config):
     # model save path
-    if os.path.exists(config['model_save_path']) is False:
-        os.mkdir(config['model_save_path'])
+    if os.path.exists(config['model_path']) is False:
+        os.mkdir(config['model_path'])
     
     
     train_data = load_data(config['train_data_path'], config)
@@ -36,6 +36,7 @@ def main(config):
     cuda_flag=False
     if torch.cuda.is_available():
         cuda_flag=True
+        model = model.cuda()
         
     
     
@@ -68,7 +69,7 @@ def main(config):
         
     
     # save model weights
-    model_path = os.path.join(config['model_save_path'], 'epoch_%d.pth'% epoch)
+    model_path = os.path.join(config['model_path'], 'epoch_%d.pth'% epoch)
     # torch.save(model.state_dict(), model_path)
     
     return model, train_data

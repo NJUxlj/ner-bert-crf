@@ -13,7 +13,7 @@ Config = {
     "max_length": 100,
     "hidden_size": 256,
     "num_layers": 2,
-    "epoch": 20,
+    "epoch": 5,
     "batch_size": 16,
     "optimizer": "adam",
     "learning_rate": 1e-3,

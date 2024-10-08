@@ -39,7 +39,7 @@ class TorchModel(nn.Module):
 				return - self.crf_layer(predict, target, mask, reduction = 'mean')
          		
 			else:
-				return self.loss(predict.view(-1, self.class_num), target.view(-1))
+				return self.loss(predict.view(-1, predict.shape[-1]), target.view(-1))
 		else:
 			if self.use_crf:
 				# 维特比解码
