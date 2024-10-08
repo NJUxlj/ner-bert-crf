@@ -19,3 +19,7 @@
 
 
 
+## 运行结果
+### version 1
+![image](https://github.com/user-attachments/assets/67ce9f4a-2bba-4a79-b2c2-f5b17326c5bf)
+
