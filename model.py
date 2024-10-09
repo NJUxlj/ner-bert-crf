@@ -4,6 +4,8 @@ import torch.nn as nn
 from torch.optim import Adam, SGD
 from torchcrf import CRF
 
+from transformers import BertModel, BertTokenizer
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 import json
 
@@ -57,12 +59,31 @@ class BertCRFModel(nn.Module):
 	'''
 	def __init__(self,config):
 		super().__init__()
-
-		
+		self.config = {
+			"bert_model_path":config["bert_config"]['bert_model_path'],
+			"class_num":config['class_num'],
+			"hidden_size":config['bert_config']['hidden_size'],
+			"dropout":config['bert_config']['dropout']
+		}
+  
+		self.bert = BertModel.from_pretrained(self.config["bert_model_path"], return_dict = False)
+		self.classifier = nn.Linear(self.config["hidden_size"], self.config["class_num"])
+		self.crf = CRF(self.config['class_num'], batch_first=True)
 	def forward(self,x, target = None):
-		pass
+		sequence_output, _ = self.bert(x) # (batch_size, seq_len, hidden_size)
+		print("sequence_output = \n", sequence_output)
+		
+		predicts = self.classifier(sequence_output) # (batch_size, seq_len, class_num)
 
-class FullSentenceNERModel(nn.Module):
+		if target!=None: # 计算CRF Loss
+			mask = target.gt(-1)
+			loss = self.crf(predicts, target, mask, reduction='mean') # (batch_size, seq_len, class_num)
+			return -loss
+		else:
+			return self.crf.decode(predicts) # (batch_size, seq_len)
+	
+  
+class WholeSentenceNERModel(nn.Module):
 	'''
 	  do the NER task for the entire sentence (sentence classification)
 	'''
@@ -203,44 +224,7 @@ if __name__ == '__main__':
 	# from config import Config
 	# model = TorchModel(Config)
 	from config import Config
-	# entity_dict = []
-	# with open(Config['train_data_path'], encoding='utf8') as f:
-	# 	for line in f:
-	# 		line = line.strip()
-	# 		if line:
-	# 			line = line.split()
-	# 			entity_dict.append((line[0], line[1]))
-	# print("entity dict loaded, size = ", len(entity_dict))
- 
-	# # print("entity dict = ", entity_dict)
 	
-	# entity_pattern_dict = {}
-	# content = "" # 实体字符串
-	# entity = ""  # 实体类型
-	# for key, value in entity_dict:
-	# 	if value == 'O' and content=="":
-	# 		entity_pattern_dict[key] = value
-	# 		content = ""
-	# 		entity = value
-	# 	if value == 'O' and content!="":
-	# 		# 记录上一轮检测到的实体
-	# 		entity_pattern_dict[content] = entity
-	# 		content = ""
-	# 		entity = value
-	# 		# 记录本轮的无关字
-	# 		entity_pattern_dict[key] = value
-	# 	else:
-	# 		content += key
-	# 		entity = re.sub(r".*-", "",value)
-
-	# if content!="":
-	# 	entity_pattern_dict[content] = entity
-	
- 
-	# print("entity pattern dict loaded, size = ", len(entity_pattern_dict))
- 
-	# print("entity pattern dict = ", entity_pattern_dict)
- 
  
  
 	model = RegularExpressionModel(Config)
@@ -248,8 +232,13 @@ if __name__ == '__main__':
 	input = encode_sentence(string, Config)
 	input = torch.LongTensor([input])
  
-	output = model(input)
+	print("input = \n",input)
  
-	print(output)
+	# output = model(input)
+ 
+	# print(output)
+	model = BertCRFModel(Config)
+	output = model(input)
+	print(output)	
 
   

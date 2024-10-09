@@ -84,6 +84,31 @@ class DataGenerator(Dataset):
     def load_schema(self, path):
         with open(path, encoding="utf8") as f:
             return json.load(f)
+        
+
+    
+class DataGeneratorforSentence:
+    '''
+        This dataset is only for the whole sentence NER task
+    '''
+    def __init__(self, config, model, logger): 
+        pass
+    
+    
+    def load(self):
+        self.data = []
+    
+    
+    
+    def prepare_data(self):
+        pass
+    
+    
+    
+    
+    def __getitem__(self,index):
+        return self.data[index]
+    
     
     
     

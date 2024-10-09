@@ -8,6 +8,13 @@
 3. RegexExpression-only NER Model
 4. Whole-Sentence NER Model
 
+## How to Run?
+```shell
+pip install -r requirements.txt
+```
+
+run main.py
+
 
 ## BERT
 ![image](https://github.com/user-attachments/assets/3720173b-90ae-4c3b-813a-ea0f90443f58)

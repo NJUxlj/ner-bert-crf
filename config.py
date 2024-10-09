@@ -19,6 +19,15 @@ Config = {
     "learning_rate": 1e-3,
     "use_crf": True,
     "class_num": 9,
-    "bert_path": r"D:\pre-trained-models\bert-base-chinese"
+    "bert_path": r"D:\pre-trained-models\bert-base-chinese",
+    "bert_config":{
+        "max_length": 128,
+        "hidden_size": 768,
+        "num_layers": 12,
+        "batch_size": 16,
+        "learning_rate": 1e-5,
+        "bert_model_path": r"D:\pre-trained-models\bert-base-chinese",
+        "dropout": 0.1
+    }
 }
 
