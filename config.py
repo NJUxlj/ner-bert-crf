@@ -17,7 +17,7 @@ Config = {
     "batch_size": 16,
     "optimizer": "adam",
     "learning_rate": 1e-3,
-    "use_crf": False,
+    "use_crf": True,
     "class_num": 9,
     "bert_path": r"D:\pre-trained-models\bert-base-chinese"
 }

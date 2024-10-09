@@ -1,10 +1,14 @@
 import torch
+import re
 import torch.nn as nn
 from torch.optim import Adam, SGD
 from torchcrf import CRF
 
 
+import json
 
+from loader import load_vocab, encode_sentence
+from typing import List
 
 class TorchModel(nn.Module):
 	def __init__(self, config):	
@@ -33,20 +37,138 @@ class TorchModel(nn.Module):
 		
 		if target is not None:
 			if self.use_crf:
-				mask = target.gr(-1)
+				mask = target.gt(-1)
 				# crf自带cross entropy loss
-                # CRF loss 最后需要取反
+				# CRF loss 最后需要取反
 				return - self.crf_layer(predict, target, mask, reduction = 'mean')
-         		
+		 		
 			else:
 				return self.loss(predict.view(-1, predict.shape[-1]), target.view(-1))
 		else:
 			if self.use_crf:
-				# 维特比解码
+				# 维特比解码 viterbi
 				return self.crf_layer.decode(predict) # (batch_size, seq_len)
 			else:
 				return predict
 
+class BertCRFModel(nn.Module):
+	'''
+		基于BERT的CRF模型
+	'''
+	def __init__(self,config):
+		super().__init__()
+
+		
+	def forward(self,x, target = None):
+		pass
+
+class FullSentenceNERModel(nn.Module):
+	'''
+	  do the NER task for the entire sentence (sentence classification)
+	'''
+	def __init__(self, config):
+		super().__init__()
+	
+	
+	def forward(self, x, target = None):
+		pass
+
+class RegularExpressionModel(nn.Module):
+	'''
+		完全基于正则表达式的序列标注模型
+		do sequence labeling with regular expression
+	'''
+	def __init__(self,config):
+		super().__init__()
+		self.config = config
+		self.vocab = load_vocab(config["vocab_path"])
+		self.reverse_vocab = self.load_reverse_vocab()
+	
+	def encode_char(self, char:str):
+		return self.vocab.get(char, self.vocab['[UNK]'])
+	def encode_sentence(self, text, padding = True):
+		input_id = []
+		
+		for word in text:
+			input_id.append(self.vocab.get(word,self.vocab['[UNK]']))
+		return input_id
+
+	def padding(self, input_id, pad_token=0):
+		# padding
+		input_id += [pad_token]*(self.config['max_length']-len(input_id))
+		
+		# truncate
+		return input_id[:self.config['max_length']]
+	
+	def load_reverse_vocab(self):
+		return {v:k for k,v in self.vocab.items()}
+
+	def forward(self, x, target = None) -> List[List]:
+		'''
+			return [[entity1, entity2 ....], 
+    				[entity3, entity4, ...]
+		'''
+		x # (batch_size, seq_len)
+		pattern_list = []
+		# load the NER dict
+		schema = json.load(open(self.config['schema_path'], encoding='utf8'))
+		
+		# load the entity corpus
+		entity_dict = []
+		with open(Config['train_data_path'], encoding='utf8') as f:
+			for line in f:
+				line = line.strip()
+				if line:
+					line = line.split()
+					entity_dict.append((line[0], line[1]))
+		print("entity dict loaded, size = ", len(entity_dict))
+	
+		# print("entity dict = ", entity_dict)
+		
+		entity_pattern_dict = {}
+		content = "" # 实体字符串
+		entity = ""  # 实体类型
+		for key, value in entity_dict:
+			if value == 'O' and content=="":
+				entity_pattern_dict[key] = value
+				content = ""
+				entity = value
+			if value == 'O' and content!="":
+				# 记录上一轮检测到的实体
+				entity_pattern_dict[content] = entity
+				content = ""
+				entity = value
+				# 记录本轮的无关字
+				entity_pattern_dict[key] = value
+			else:
+				content += key
+				entity = re.sub(r".*-", "",value)
+
+		if content!="":
+			entity_pattern_dict[content] = entity
+		
+  
+
+		# 匹配
+		entity_matrix = [] # 记录每行匹配到的实体
+		for row in x:
+			row = row.tolist()
+			# 转为字符串
+			row = "".join([self.reverse_vocab.get(i) for i in row])
+			print("row = ", row)
+			entity_row = [] # 记录匹配到的实体
+			for pattern, value in entity_pattern_dict.items():
+				# 取出pattern中的非字母数字下划线
+				pattern2 = re.sub(r"[\W]", "", pattern)
+				if pattern2 == "":
+					continue
+				# print("pattern = ", pattern)
+				if re.search(pattern2,row) is not None:
+					print("match: ", row, " ", pattern2)
+					entity_row.append(entity_pattern_dict[pattern])
+			entity_matrix.append(entity_row)
+		return entity_matrix
+     
 
 
 
@@ -61,9 +183,73 @@ def choose_optimizer(config, model):
 
 
 
+def id_to_label(id, config):
+	'''
+	return label
+	'''
+	label2id = {}
+	with open(config['schema_path'], 'r', encoding = 'utf8') as f:
+		label2id = json.load(f)
+
+	for k, v in label2id.items():
+		if v == id:
+			return k
+
+		
+
+
 
 if __name__ == '__main__':
+	# from config import Config
+	# model = TorchModel(Config)
 	from config import Config
-	model = TorchModel(Config)
+	# entity_dict = []
+	# with open(Config['train_data_path'], encoding='utf8') as f:
+	# 	for line in f:
+	# 		line = line.strip()
+	# 		if line:
+	# 			line = line.split()
+	# 			entity_dict.append((line[0], line[1]))
+	# print("entity dict loaded, size = ", len(entity_dict))
+ 
+	# # print("entity dict = ", entity_dict)
+	
+	# entity_pattern_dict = {}
+	# content = "" # 实体字符串
+	# entity = ""  # 实体类型
+	# for key, value in entity_dict:
+	# 	if value == 'O' and content=="":
+	# 		entity_pattern_dict[key] = value
+	# 		content = ""
+	# 		entity = value
+	# 	if value == 'O' and content!="":
+	# 		# 记录上一轮检测到的实体
+	# 		entity_pattern_dict[content] = entity
+	# 		content = ""
+	# 		entity = value
+	# 		# 记录本轮的无关字
+	# 		entity_pattern_dict[key] = value
+	# 	else:
+	# 		content += key
+	# 		entity = re.sub(r".*-", "",value)
+
+	# if content!="":
+	# 	entity_pattern_dict[content] = entity
+	
+ 
+	# print("entity pattern dict loaded, size = ", len(entity_pattern_dict))
+ 
+	# print("entity pattern dict = ", entity_pattern_dict)
+ 
+ 
+ 
+	model = RegularExpressionModel(Config)
+	string = "筹集到海外侨胞捐资1800万元,全部用于发展平民医院的“硬件”建设。" 
+	input = encode_sentence(string, Config)
+	input = torch.LongTensor([input])
+ 
+	output = model(input)
+ 
+	print(output)
 
   

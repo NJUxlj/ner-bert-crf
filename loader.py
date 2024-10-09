@@ -87,8 +87,14 @@ class DataGenerator(Dataset):
     
     
     
-
-
+def encode_sentence(text, config):
+    vocab = load_vocab(config['vocab_path'])
+    input_id = []
+        
+    for word in text:
+        input_id.append(vocab.get(word,vocab['[UNK]']))
+    
+    return input_id
 def load_vocab(path):
     vocab_dict = {}
     
