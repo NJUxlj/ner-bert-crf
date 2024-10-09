@@ -5,7 +5,7 @@ import random
 import numpy as np
 import logging
 from config import Config
-from model import TorchModel, choose_optimizer, id_to_label
+from model import TorchModel, ModelHub, choose_optimizer, id_to_label
 from evaluate import Evaluator
 from loader import load_data
 
@@ -28,8 +28,8 @@ def main(config):
     
     train_data = load_data(config['train_data_path'], config)
     
-    
-    model = TorchModel(Config)
+    hub = ModelHub("bert",Config)
+    model = hub.model
     
     
     

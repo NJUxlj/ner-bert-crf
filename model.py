@@ -12,6 +12,25 @@ import json
 from loader import load_vocab, encode_sentence
 from typing import List
 
+
+class ModelHub:
+	'''
+		choose your model to train
+	'''
+	def __init__(self, model_name, config):
+		if model_name == "bert":
+			self.model = BertCRFModel(config)
+		elif model_name == "lstm":
+			self.model = TorchModel(config)
+		elif model_name == 'regex':
+			self.model = RegularExpressionModel(config)
+		elif model_name=='sentence':
+			self.model = WholeSentenceNERModel(config)
+		else:
+			raise NotImplementedError("model name not supported")
+
+
+
 class TorchModel(nn.Module):
 	def __init__(self, config):	
 		super(TorchModel,self).__init__()
@@ -71,7 +90,7 @@ class BertCRFModel(nn.Module):
 		self.crf = CRF(self.config['class_num'], batch_first=True)
 	def forward(self,x, target = None):
 		sequence_output, _ = self.bert(x) # (batch_size, seq_len, hidden_size)
-		print("sequence_output = \n", sequence_output)
+		# print("sequence_output = \n", sequence_output)
 		
 		predicts = self.classifier(sequence_output) # (batch_size, seq_len, class_num)
 
