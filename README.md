@@ -8,12 +8,19 @@
 3. RegexExpression-only NER Model
 4. Whole-Sentence NER Model
 
+---
+
 ## How to Run?
 ```shell
 pip install -r requirements.txt
 ```
 
 run main.py
+
+---
+
+## project struction
+- in model.py, you can see there is a ModelHub that allows you to select 1 of the 4 models. you can do the selection in main() function from main.py.
 
 
 ## BERT
@@ -39,5 +46,13 @@ run main.py
 
 ### RegexNERModel output
 ![image](https://github.com/user-attachments/assets/2926ef88-507d-4a78-ade6-5ac8cee16da0)
+
+
+### Bert + CRF output
+![image](https://github.com/user-attachments/assets/2d73bb61-e38b-4a74-a531-100fb05cffb7)
+
+
+### Whole Sentence NER output
+
 
 
