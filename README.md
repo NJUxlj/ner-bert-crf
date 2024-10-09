@@ -49,7 +49,8 @@ run main.py
 
 
 ### Bert + CRF output
-![image](https://github.com/user-attachments/assets/2d73bb61-e38b-4a74-a531-100fb05cffb7)
+![image](https://github.com/user-attachments/assets/190bd57a-e7d0-4e88-b9e5-0283224a0d74)
+
 
 
 ### Whole Sentence NER output
