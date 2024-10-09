@@ -6,7 +6,9 @@ import jieba
 import random
 import numpy as np
 
-from torch.utils.data import Dataset, DataLoader    
+from torch.utils.data import Dataset, DataLoader
+from transformers import AutoTokenizer, BertTokenizer
+from collections import defaultdict    
 
 
 class DataGenerator(Dataset):
@@ -91,24 +93,92 @@ class DataGeneratorforSentence:
     '''
         This dataset is only for the whole sentence NER task
     '''
-    def __init__(self, config, model, logger): 
-        pass
-    
+    def __init__(self, data_path, config, logger): 
+        self.path = data_path
+        self.logger = logger
+        self.config = config
+        self.max_length = config['max_length']
+        
+        
+        self.tokenizer = AutoTokenizer.from_pretrained(self.config["bert_path"], add_special_tokens=True)
+        self.label_map = {"B":0, "I":1, "O":2}
+        self.load()
     
     def load(self):
         self.data = []
+        with open(self.path, encoding="utf8") as f:
+            for segment in f.read().split("\n\n"): # 处理每一段text
+                if segment.strip()=="" or "\n" not in segment:
+                    continue
+                self.prepare_data(segment)
+        
+        return 
+            
+
     
-    
-    
-    def prepare_data(self):
-        pass
-    
+    def prepare_data(self, segment):
+        '''
+                处理一段话(1个batch)，把它让分割成很多句话，以及他们对应的标签
+                
+                self.data.append([
+                    torch.LongTensor(segment_input_ids),
+                    torch.LongTensor(segment_attention_mask),
+                    torch.LongTensor(labels)
+                ])
+                
+                return
+        '''
+        segment_input_ids = []
+        segment_attention_mask = []
+        labels = []
+        
+        for line in segment.split("\n"):
+            line = line.strip()
+            if line == "":
+                continue
+            
+            sentence = line.split('\t')[0]
+            label = line.split('\t')[1][0]
+            role =line.split('\t')[3]
+            
+            assert label in self.label_map and label
+            assert role in ["Reply", "Review"]
+            
+            label = self.label_map[label]
+            encode = self.tokenizer.encode_plus(sentence, 
+                                                max_length = self.config['max_length'],
+                                                pad_to_max_length=True,
+                                                add_special_tokens=True)
+            input_ids = encode['input_ids']
+            attention_mask = encode['attention_mask']
+            
+            segment_input_ids.append(input_ids)
+            segment_attention_mask.append(attention_mask)
+            
+            labels.append(label)
+            if len(labels) > self.config["max_sentence"]:
+                break
+            
+        self.data.append([
+            torch.LongTensor(segment_input_ids), # (batch_size, seq_len)
+            torch.LongTensor(segment_attention_mask), # (batch_size, seq_len)
+            torch.LongTensor(labels) 
+        ])
+        
+        return
+            
+            
+            
     
     
     
     def __getitem__(self,index):
         return self.data[index]
     
+    
+    
+    def __len__(self):
+        return len(self.data)
     
     
     
@@ -120,6 +190,8 @@ def encode_sentence(text, config):
         input_id.append(vocab.get(word,vocab['[UNK]']))
     
     return input_id
+
+
 def load_vocab(path):
     vocab_dict = {}
     
@@ -140,6 +212,11 @@ def load_data(data_path, config, shuffle=True):
 
     return data_loader
 
+
+def load_data_for_sentence(data_path, config, logger):
+    data_generator = DataGeneratorforSentence(data_path, config, logger)
+    
+    return data_generator
 
 
 

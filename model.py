@@ -1,7 +1,7 @@
 import torch
 import re
 import torch.nn as nn
-from torch.optim import Adam, SGD
+from torch.optim import Adam, SGD, AdamW
 from torchcrf import CRF
 
 from transformers import BertModel, BertTokenizer
@@ -108,11 +108,56 @@ class WholeSentenceNERModel(nn.Module):
 	'''
 	def __init__(self, config):
 		super().__init__()
+		self.bert = BertModel.from_pretrained(config["bert_path"], return_dict = False)
+		self.dropout = nn.Dropout(self.bert.config.hidden_dropout_prob)
+		self.num_labels = config["sentence_config"]['num_labels']
+		
+		if config['sentence_config']['recurrent'] == "lstm":
+			self.recurrent_layer = nn.LSTM(self.bert.config.hidden_size, 
+                                  self.bert.config.hidden_size//2, 
+                                  batch_first=True, 
+                                  bidirectional=True,
+                                  num_layers = 1)
+		elif config['sentence_config']['recurrent'] == 'gru':
+			self.recurrent_layer = nn.GRU(self.bert.config.hidden_size, 
+                                 			self.bert.config.hidden_size//2,
+											batch_first=True,
+											bidirectional=True,
+											num_layers =1
+											)
+		else:
+			assert False
+   
+		
+		self.classifier = nn.Linear(self.bert.config.hidden_size, self.num_labels)
+		
+			
 	
-	
-	def forward(self, x, target = None):
-		pass
+	def forward(self, input_ids=None, attention_mask=None, labels=None):
+		'''
+			input_ids: (batch_size, seq_len)
+			attention_mask: (batch_size, seq_len)
+			labels: (batch_size, seq_len)
+  		'''
+    
+		output = self.bert(input_ids, attention_mask) # (batch_size, seq_len, hidden_size)
 
+		pooled_output = output[1] # (batch_size, hidden_size)
+  
+		pooled_output = self.dropout(pooled_output)
+  
+		recurrent_output,_ = self.recurrent_layer(pooled_output.unsqueeze(0)) # (1, batch_size, hidden_size) 
+		
+		# 线性层只能处理二维张量
+		output = self.classifier(recurrent_output.squeeze(0)) # (batch_size, num_labels)
+  
+  
+		if labels is not None:
+			loss = nn.CrossEntropyLoss()
+			return loss(output, labels)
+		else:
+			return output
+  
 class RegularExpressionModel(nn.Module):
 	'''
 		完全基于正则表达式的序列标注模型
@@ -256,8 +301,14 @@ if __name__ == '__main__':
 	# output = model(input)
  
 	# print(output)
-	model = BertCRFModel(Config)
-	output = model(input)
-	print(output)	
-
+	# model = BertCRFModel(Config)
+	# output = model(input)
+	# print(output)	
+	
+ 
+	input_ids = torch.LongTensor([[1,3,34,67,64,678,123],[123,356,347,673,642,634,183]])
+	attention_mask = torch.LongTensor([[1,1,1,1,1,1,1],[1,1,1,1,1,1,1]])
+	model = WholeSentenceNERModel(Config)
+	output = model(input_ids, attention_mask)
+	print(output)
   

@@ -20,6 +20,7 @@ Config = {
     "use_crf": True,
     "class_num": 9,
     "bert_path": r"D:\pre-trained-models\bert-base-chinese",
+    
     "bert_config":{
         "max_length": 128,
         "hidden_size": 768,
@@ -28,6 +29,17 @@ Config = {
         "learning_rate": 1e-5,
         "bert_model_path": r"D:\pre-trained-models\bert-base-chinese",
         "dropout": 0.1
+    },
+    "sentence_config":{
+        "max_length": 50,
+        "epoch": 10,
+        "batch_size": 10,
+        "optimizer": "adam",
+        "learning_rate":1e-5,
+        "seed":42,
+        "num_labels": 3,
+        "recurrent":"gru",
+        "max_sentence": 50
     }
 }
 
