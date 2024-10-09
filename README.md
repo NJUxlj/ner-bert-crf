@@ -22,6 +22,10 @@ run main.py
 ## Project Structure
 - in `model.py`, you can see there is a ModelHub that allows you to select 1 of the 4 models. you can do the selection in `main()` function from `main.py`.
 
+![image](https://github.com/user-attachments/assets/ac416b36-0b80-44a2-89aa-3af5a084aa33)
+
+![image](https://github.com/user-attachments/assets/31774bf1-59ba-4123-9793-a423f333b9fb)
+
 
 ## BERT
 ![image](https://github.com/user-attachments/assets/3720173b-90ae-4c3b-813a-ea0f90443f58)
