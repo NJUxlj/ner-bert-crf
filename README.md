@@ -2,7 +2,11 @@
 使用BERT+CRF模型来完成NER任务
 
 
-
+## NER Models
+1. BiLSTM+CRF
+2. Bert + CRF
+3. RegexExpression-only NER Model
+4. Whole-Sentence NER Model
 
 
 ## BERT
@@ -19,7 +23,14 @@
 
 
 
-## 运行结果
-### version 1
+## Running Results
+### CRF + BiLSTM output
 ![image](https://github.com/user-attachments/assets/67ce9f4a-2bba-4a79-b2c2-f5b17326c5bf)
+
+
+
+
+### RegexNERModel output
+![image](https://github.com/user-attachments/assets/2926ef88-507d-4a78-ade6-5ac8cee16da0)
+
 
