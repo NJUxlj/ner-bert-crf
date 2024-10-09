@@ -6,7 +6,7 @@
 1. BiLSTM+CRF
 2. Bert + CRF
 3. RegexExpression-only NER Model
-4. Whole-Sentence NER Model
+4. Whole-Sentence NER Model (BERT+LSTM/GRU)
 
 ---
 
@@ -58,6 +58,7 @@ run main.py
 
 
 ### Whole Sentence NER output
+![image](https://github.com/user-attachments/assets/80a1cb7d-450f-45e4-aef1-ccbd22bff750)
 
 
 
