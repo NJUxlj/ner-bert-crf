@@ -208,7 +208,7 @@ class Evaluator:
          }
          
         '''
-        with open('metrics.csv', 'w', newline='', encoding='utf-8') as csvfile:
+        with open('metrics.csv', 'a+', newline='', encoding='utf-8') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow([self.final_stats['model_name'], '', '', ''])
             writer.writerow(['Entity type', 'Precision', 'Recall', 'F1'])
@@ -221,6 +221,8 @@ class Evaluator:
             writer.writerow(['Micro-F1', '', '', f'{self.final_stats["micro_f1"]:.6f}'])
             writer.writerow(['Average Precision', '', '', f'{self.final_stats["avg_precision"]:.6f}'])
             writer.writerow(['Average Recall', '', '', f'{self.final_stats["avg_recall"]:.6f}'])
+            writer.writerow([''])
+            writer.writerow([''])
             
         print("statistics has been written to csv ~~~")
         

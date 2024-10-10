@@ -61,7 +61,11 @@ Config = {
 pip install -r requirements.txt
 ```
 
-run main.py
+1. run `main.py` 
+2. in `main.py` :
+   1. the `main()` function is used to train only 1 model, and see performance
+   2. the `batch_train()` function is used to train all the models and see all the performance of NER.
+   3. you can check `metrics.csv` for all the models' performance 
 
 ---
 
@@ -109,15 +113,17 @@ run main.py
 ---
 
 ## Training Results
+1. you can check the complete training metrics in `metrics.csv`
 ![image](https://github.com/user-attachments/assets/aaa94f18-cc29-4910-a6c3-4699178f1ae4)
 
 
 ---
 
 ## Performance Comparison
-| Model | Accuracy | Recall |   F1   |  
-|----------|----------|----------|----------| 
-| BiLSTM+CRF | Row 1 Col 2 | Row 1 Col 3 |         |
-| Bert+CRF | Row 2 Col 2 | Row 2 Col 3 |         |
-| Regex-Only | Row 3 Col 2 | Row 3 Col 3 |         |
-| BERT+RNN | Row 3 Col 2 | Row 3 Col 3 |         |
+| Model | Avg-Precision | Avg-Recall |   Macro-F1   |  Micro-F1 |  
+|----------|----------|----------|----------|------------|
+| BiLSTM+CRF |0.249998 | 0.249998 |  0.249996   | 0.999985 |
+| Bert+CRF | 0.249998 | 0.249998 | 0.249996 | 0.999985 |
+
+| Regex-Only | Row 3 Col 2 | Row 3 Col 3 |         |  |
+| BERT+RNN | Row 3 Col 2 | Row 3 Col 3 |         |   |

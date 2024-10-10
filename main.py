@@ -20,7 +20,7 @@ Model Training Master Program
 '''
 
 
-def main(config):
+def main(config, model_name=None):
     # model save path
     if os.path.exists(config['model_path']) is False:
         os.mkdir(config['model_path'])
@@ -28,7 +28,7 @@ def main(config):
     
     train_data = load_data(config['train_data_path'], config)
     
-    hub = ModelHub("bert",Config)
+    hub = ModelHub(model_name,Config)
     model = hub.model
     
     
@@ -75,9 +75,22 @@ def main(config):
     return model, train_data
 
 
+
+def batch_train(config):
+    with open("metrics.csv", "w", encoding='utf8') as f:
+        f.close()
+        
+    model_names = ["bert", "lstm"]
+    
+    for model_name in model_names:
+        main(config, model_name)
+
+
+
 if __name__ == '__main__':
     from config import Config
-    model, train_data = main(Config)
+    # model, train_data = main(Config, "bert")
+    batch_train(Config)
     
     # input = [[12, 9, 8, 34, 5, 8, 98]]
     # input = torch.LongTensor(input)
