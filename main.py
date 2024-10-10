@@ -65,7 +65,7 @@ def main(config):
             watch_loss.append(loss.item())
             
         print("epoch:{} loss: {}".format(epoch+1,np.mean(watch_loss)))
-        # evaluator.evaluate()
+        evaluator.eval(epoch)
         
     
     # save model weights
@@ -79,11 +79,11 @@ if __name__ == '__main__':
     from config import Config
     model, train_data = main(Config)
     
-    input = [[12, 9, 8, 34, 5, 8, 98]]
-    input = torch.LongTensor(input)
-    input = input.cuda()
-    output = model(input)
+    # input = [[12, 9, 8, 34, 5, 8, 98]]
+    # input = torch.LongTensor(input)
+    # input = input.cuda()
+    # output = model(input)
     
-    for i in output[0]:
-        print(id_to_label(i, Config), end = ', ')
+    # for i in output[0]:
+    #     print(id_to_label(i, Config), end = ', ')
     
