@@ -1,22 +1,22 @@
 # ner-bert-crf
-- Use BERT+CRF model to complete NER(Named Entity Recognition) task
-  - for example, if you give a sentence like "I am a student from China", the model will output the following result: ['O','O','O','O','B-LOCATION','I-LOCATION','O']
-  - if you give a sentence like "I am Lisa from NewJersey", the model will output the following result: ['O','O','B-PERSON','I-PERSON','O','B-LOCATION']
+- Use `BERT+CRF` model to complete **NER(Named Entity Recognition)** task
+  - for example, if you give a sentence like **"I am a student from China"**, the model will output the following result: **`['O','O','O','O','B-LOCATION','I-LOCATION','O']`**
+  - if you give a sentence like **"I am Lisa from NewJersey"**, the model will output the following result: **`['O','O','B-PERSON','I-PERSON','O','B-LOCATION']`**
 
 
-## Basic NER Models (4 models in total)
-1. BiLSTM+CRF
-2. Bert + CRF
-3. RegexExpression-only NER Model
+## Basic NER Models (4 models in total, check `model.py`)
+1. BiLSTM+CRF: `TorchModel`
+2. Bert + CRF: `BertCRFModel`
+3. RegexExpression-only NER Model: `RegularExpressionModel`
    1. it only uses regular expression without any deeplearning methods to do the NER task.
-4. Whole-Sentence NER Model (BERT+LSTM/GRU)
+4. Whole-Sentence NER Model (BERT+LSTM/GRU): `WholeSentenceNERModel`
 
 ---
 
 ## Additional models (you can try and play)
 1. a self-defined tokenizer to replace the AutoTokenizer in BERT.
-2. Bert+self-defined-CRF+verterbi
-3. Bert+self-defined-CRF+BeamSearch
+2. Bert+self-defined-CRF+**verterbi**
+3. Bert+self-defined-CRF+**BeamSearch**
 
 
 ## Self-Defined-CRF
@@ -34,6 +34,29 @@
 ---
 
 ## How to Run?
+1. before running, fill your **local BERT model path** in `config.py`
+2. you can also modify other hyperparameters as your need.
+```python
+Config = {
+    "model_path": "model_output",
+    "schema_path": "ner_data/schema.json",
+    "train_data_path": "ner_data/train",
+    "valid_data_path": "ner_data/test",
+    "vocab_path":"chars.txt",
+    "max_length": 100,
+    "hidden_size": 256,
+    "num_layers": 2,
+    "epoch": 5,
+    "batch_size": 16,
+    "optimizer": "adam",
+    "learning_rate": 1e-3,
+    "use_crf": True,
+    "class_num": 9,
+    "bert_path": r"D:\pre-trained-models\bert-base-chinese",
+    ...
+}
+```
+
 ```shell
 pip install -r requirements.txt
 ```
