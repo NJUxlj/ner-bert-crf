@@ -25,6 +25,7 @@ class Evaluator:
             "ORGANIZATION":defaultdict(int),
         }
         
+        self.model.eval()
         
         for index, batch in enumerate(self.valid_data):
             # get a batch of sentences
@@ -66,16 +67,16 @@ class Evaluator:
                 .tolist()：将张量转换为普通的 Python 列表。
         '''
         if not self.config['use_crf']:
-            predicts = torch.argmax(predicts, -1)
+            predicts = torch.argmax(predicts, dim = -1)
         
         for true_label, pred_label, sentence in zip(labels, predicts, sentences):
             if not self.config['use_crf']:
                 pred_label = pred_label.cpu().detach().tolist()
             true_label = true_label.cpu().detach().tolist()
             
-            true_entities = self.decode(true_label, sentence)
+            true_entities = self.decode(sentence, true_label)
             
-            pred_entities =self.decode(pred_label, sentence)
+            pred_entities =self.decode(sentence, pred_label)
             
             print("=============")
             print("true entities:\n",true_entities)
