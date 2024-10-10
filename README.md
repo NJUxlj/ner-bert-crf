@@ -1,12 +1,35 @@
 # ner-bert-crf
-使用BERT+CRF模型来完成NER任务
+- Use BERT+CRF model to complete NER(Named Entity Recognition) task
+  - for example, if you give a sentence like "I am a student from China", the model will output the following result: ['O','O','O','O','B-LOCATION','I-LOCATION','O']
+  - if you give a sentence like "I am Lisa from NewJersey", the model will output the following result: ['O','O','B-PERSON','I-PERSON','O','B-LOCATION']
 
 
-## NER Models
+## Basic NER Models (4 models in total)
 1. BiLSTM+CRF
 2. Bert + CRF
 3. RegexExpression-only NER Model
+   1. it only uses regular expression without any deeplearning methods to do the NER task.
 4. Whole-Sentence NER Model (BERT+LSTM/GRU)
+
+---
+
+## Additional models (you can try and play)
+1. a self-defined tokenizer to replace the AutoTokenizer in BERT.
+2. Bert+self-defined-CRF+verterbi
+3. Bert+self-defined-CRF+BeamSearch
+
+
+## Self-Defined-CRF
+- we copy the CRF code from `torchcrf` package.
+- we add a `decode_beam_search` function to the CRF model, which allows us to use the CRF model to do beam search decoding
+- we add a `decode_viterbi` function to the CRF model, which allows us to use the CRF model to do viterbi decoding
+- you can check the modified  CRF code in `crf.py`
+  
+---
+
+## Important Project Components
+
+
 
 ---
 

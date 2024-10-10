@@ -154,7 +154,7 @@ class WholeSentenceNERModel(nn.Module):
   
 		if labels is not None:
 			loss = nn.CrossEntropyLoss()
-			return loss(output, labels)
+			return loss(output, labels.view(-1))
 		else:
 			return output
   
@@ -255,7 +255,12 @@ class RegularExpressionModel(nn.Module):
 		return entity_matrix
      
 
-
+class MyTokenizer(nn.Module):
+    '''
+     A self-defined tokenizer
+    '''
+    def __init__(self, config):
+        pass
 
 def choose_optimizer(config, model):
 	optimizer = config['optimizer']
@@ -265,6 +270,8 @@ def choose_optimizer(config, model):
 		return Adam(model.parameters(), lr=learning_rate)
 	elif optimizer == 'sgd':
 		return SGD(model.parameters(), lr=learning_rate)
+	elif optimizer == 'adamw':
+		return AdamW(model.parameters(), lr=learning_rate)
 
 
 
@@ -300,7 +307,7 @@ if __name__ == '__main__':
  
 	# output = model(input)
  
-	# print(output)
+	# print(output)	
 	# model = BertCRFModel(Config)
 	# output = model(input)
 	# print(output)	
@@ -308,7 +315,8 @@ if __name__ == '__main__':
  
 	input_ids = torch.LongTensor([[1,3,34,67,64,678,123],[123,356,347,673,642,634,183]])
 	attention_mask = torch.LongTensor([[1,1,1,1,1,1,1],[1,1,1,1,1,1,1]])
+	labels = torch.LongTensor([[1], [0]])
 	model = WholeSentenceNERModel(Config)
-	output = model(input_ids, attention_mask)
+	output = model(input_ids, attention_mask, labels)
 	print(output)
   
