@@ -50,6 +50,9 @@ class TorchModel(nn.Module):
 		self.loss = torch.nn.CrossEntropyLoss(ignore_index=-1)  #loss采用交叉熵损失
 
 	def forward(self, x, target = None):
+		'''
+			loss: (batch_size * seq_len, 1)
+  		'''
 		x = self.embedding(x) # (batch_size, seq_len)
   
 		x,_ = self.bilstm(x) # (batch_size, seq_len, hidden_size * 2)

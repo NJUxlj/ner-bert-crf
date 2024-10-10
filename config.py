@@ -4,6 +4,8 @@
 modify your model parameter configuration
 """
 
+import os
+
 Config = {
     "model_path": "model_output",
     "schema_path": "ner_data/schema.json",
@@ -39,7 +41,14 @@ Config = {
         "seed":42,
         "num_labels": 3,
         "recurrent":"gru",
-        "max_sentence": 50
+        "max_sentence": 50,
+        "train_data_path": "sentence_ner_data/train",
+        "valid_data_path": "sentence_ner_data/test",
     }
 }
+
+if "CUDA_VISIBLE_DEVICES" in os.environ:
+    Config["num_gpus"] = len(os.environ["CUDA_VISIBLE_DEVICES"].split(","))
+else:
+    Config["num_gpus"] = 0
 

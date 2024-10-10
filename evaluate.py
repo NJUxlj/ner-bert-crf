@@ -17,6 +17,15 @@ class Evaluator:
 
     
     def eval(self, epoch):
+        
+        if type(self.model).__name__ == "WholeSentenceNERModel":
+            self.eval_sentence_ner(epoch)
+            return
+        
+        elif type(self.model).__name__ == "RegularExpressionModel":
+            self.eval_regular_expression(epoch)
+            return 
+        
         self.logger.info(f"开始测试第{epoch}轮模型效果")
         self.stats_dict = {
             "LOCATION": defaultdict(int),
@@ -43,10 +52,15 @@ class Evaluator:
             self.write_stats(labels_list, predicts, sentences)
         self.show_stats()
         return
+    
+    
+    def eval_sentence_ner(self,epoch):
+        return
             
             
     
-    
+    def eval_regular_expression(self, epoch):
+        return
     
     
     

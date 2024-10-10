@@ -122,8 +122,7 @@ pip install -r requirements.txt
 ## Performance Comparison
 | Model | Avg-Precision | Avg-Recall |   Macro-F1   |  Micro-F1 |  
 |----------|----------|----------|----------|------------|
-| BiLSTM+CRF |0.249998 | 0.249998 |  0.249996   | 0.999985 |
-| Bert+CRF | 0.249998 | 0.249998 | 0.249996 | 0.999985 |
-
-| Regex-Only | Row 3 Col 2 | Row 3 Col 3 |         |  |
-| BERT+RNN | Row 3 Col 2 | Row 3 Col 3 |         |   |
+| BiLSTM+CRF |0.634867 | 0.489829 |  0.548224   | 0.657138 |
+| Bert+CRF | 0.416666 | 0.229813 | 0.282876 | 0.406775 |
+| Regex-Only |     |    |         |     |
+| BERT+RNN |    |    |         |       |
