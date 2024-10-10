@@ -87,7 +87,7 @@ run main.py
 
 
 
-## Running Results
+## Model Test Results
 ### CRF + BiLSTM output
 ![image](https://github.com/user-attachments/assets/67ce9f4a-2bba-4a79-b2c2-f5b17326c5bf)
 
@@ -107,4 +107,12 @@ run main.py
 ![image](https://github.com/user-attachments/assets/80a1cb7d-450f-45e4-aef1-ccbd22bff750)
 
 
+---
 
+## Performance Comparison
+| Model | Accuracy | Recall |   F1   |  
+|----------|----------|----------|----------| 
+| BiLSTM+CRF | Row 1 Col 2 | Row 1 Col 3 |         |
+| Bert+CRF | Row 2 Col 2 | Row 2 Col 3 |         |
+| Regex-Only | Row 3 Col 2 | Row 3 Col 3 |         |
+| BERT+RNN | Row 3 Col 2 | Row 3 Col 3 |         |

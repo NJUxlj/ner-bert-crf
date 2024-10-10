@@ -51,6 +51,10 @@ class Evaluator:
     def write_states(self, labels, predicts, sentences):
         '''
             处理一个 batch的数据，并写入统计字典，统计预测结果与真实结果的差异
+            
+            labels: [batch_size, max_length]
+            predicts: [batch_size, max_length]
+            sentences: [batch_size]
         '''
         assert len(labels)==len(predicts)==len(sentences)
         
@@ -61,7 +65,16 @@ class Evaluator:
                 .tolist()：将张量转换为普通的 Python 列表。
         '''
         if not self.config['use_crf']:
-            pass
+            predicts = torch.argmax(predicts, -1)
+        
+        for true_label, pred_label, sentence in zip(labels, predicts, sentences):
+            if not self.config['use_crf']:
+                pred_label = pred_label.cpu().detach().tolist()
+            true_label = true_label.cpu().detach().tolist()
+            
+            true_entities = self.decode()
+            
+            pred_entities =self.decode()
     
     
     def show_states(self):
