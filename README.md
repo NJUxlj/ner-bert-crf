@@ -106,6 +106,11 @@ run main.py
 ### Whole Sentence NER output
 ![image](https://github.com/user-attachments/assets/80a1cb7d-450f-45e4-aef1-ccbd22bff750)
 
+---
+
+## Training Results
+![image](https://github.com/user-attachments/assets/aaa94f18-cc29-4910-a6c3-4699178f1ae4)
+
 
 ---
 
