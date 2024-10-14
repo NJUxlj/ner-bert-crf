@@ -39,10 +39,18 @@ class CRF(nn.Module):
         super().__init__()
         self.num_tags = num_tags
         self.batch_first = batch_first
-        self.start_transitions = nn.Parameter(torch.empty(num_tags))
+        # 从起始位置到各标签的转移分数
+        self.start_transitions = nn.Parameter(torch.empty(num_tags)) # shape: (num_tags,)
+        # 从各标签到结束位置的转移分数
         self.end_transitions = nn.Parameter(torch.empty(num_tags))
-        self.transitions = nn.Parameter(torch.empty(num_tags, num_tags))
-
+        
+        # 从各标签到各标签的转移分数
+        '''
+        shape: (num_tags, num_tags)
+        '''
+        self.transitions = nn.Parameter(torch.empty(num_tags, num_tags)) # shape: (num_tags, num_tags)
+        
+        # 参数初始化
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -63,7 +71,7 @@ class CRF(nn.Module):
             emissions: torch.Tensor,
             tags: torch.LongTensor,
             mask: Optional[torch.ByteTensor] = None,
-            reduction: str = 'sum',
+            reduction: str = 'sum', # 指定对输出的处理方式
     ) -> torch.Tensor:
         """Compute the conditional log likelihood of a sequence of tags given emission scores.
 
@@ -76,7 +84,9 @@ class CRF(nn.Module):
                 ``(batch_size, seq_length)`` otherwise.
             mask (`~torch.ByteTensor`): Mask tensor of size ``(seq_length, batch_size)``
                 if ``batch_first`` is ``False``, ``(batch_size, seq_length)`` otherwise.
+                
             reduction: Specifies  the reduction to apply to the output:
+                【怎么处理每段路径上的概率分数？】
                 ``none|sum|mean|token_mean``. ``none``: no reduction will be applied.
                 ``sum``: the output will be summed over batches. ``mean``: the output will be
                 averaged over batches. ``token_mean``: the output will be averaged over tokens.
@@ -84,8 +94,12 @@ class CRF(nn.Module):
         Returns:
             `~torch.Tensor`: The log likelihood. This will have size ``(batch_size,)`` if
             reduction is ``none``, ``()`` otherwise.
+            
+            给tags: 返回 log(P(y|x)),  如果要计算loss，还要取个负数
+            
+            不给tags: 返回 
         """
-        self._validate(emissions, tags=tags, mask=mask)
+        self._validate(emissions, tags=tags, mask=mask) # 检查输入的维度和有效性
         if reduction not in ('none', 'sum', 'mean', 'token_mean'):
             raise ValueError(f'invalid reduction: {reduction}')
         if mask is None:
@@ -97,12 +111,18 @@ class CRF(nn.Module):
             mask = mask.transpose(0, 1)
 
         # shape: (batch_size,)
+        # 计算分子（路径得分）
         numerator = self._compute_score(emissions, tags, mask)
+        
         # shape: (batch_size,)
+        # 计算分母（归一化因子）
         denominator = self._compute_normalizer(emissions, mask)
+        
         # shape: (batch_size,)
+        # 计算对数似然
         llh = numerator - denominator
-
+        
+        # 对结果进行归约
         if reduction == 'none':
             return llh
         if reduction == 'sum':
@@ -137,8 +157,7 @@ class CRF(nn.Module):
         return self._viterbi_decode(emissions, mask)
     
     
-    def decode_beam_search(self, emissions: torch.Tensor, mask: Optional[torch.ByteTensor] = None)-> List[List[int]]:
-        pass
+
     
     
     
@@ -151,6 +170,10 @@ class CRF(nn.Module):
             emissions: torch.Tensor,
             tags: Optional[torch.LongTensor] = None,
             mask: Optional[torch.ByteTensor] = None) -> None:
+        
+        '''
+         检查 emission， mask， tags 的维度
+        '''
         if emissions.dim() != 3:
             raise ValueError(f'emissions must have dimension of 3, got {emissions.dim()}')
         if emissions.size(2) != self.num_tags:
@@ -171,12 +194,17 @@ class CRF(nn.Module):
                     f'got {tuple(emissions.shape[:2])} and {tuple(mask.shape)}')
             no_empty_seq = not self.batch_first and mask[0].all()
             no_empty_seq_bf = self.batch_first and mask[:, 0].all()
+            
             if not no_empty_seq and not no_empty_seq_bf:
+                # 每个batch对应的第一个token mask 必须是1
                 raise ValueError('mask of the first timestep must all be on')
 
     def _compute_score(
             self, emissions: torch.Tensor, tags: torch.LongTensor,
             mask: torch.ByteTensor) -> torch.Tensor:
+        '''
+         计算路径得分
+        '''
         # emissions: (seq_length, batch_size, num_tags)
         # tags: (seq_length, batch_size)
         # mask: (seq_length, batch_size)
@@ -184,23 +212,70 @@ class CRF(nn.Module):
         assert emissions.shape[:2] == tags.shape
         assert emissions.size(2) == self.num_tags
         assert mask.shape == tags.shape
-        assert mask[0].all()
+        assert mask[0].all() # 所有batch上的第一个token的mask必须为True
 
         seq_length, batch_size = tags.shape
         mask = mask.float()
+        
+        '''
+           以下处理序列的第一个时间步
+        '''
 
         # Start transition score and first emission
-        # shape: (batch_size,)
+        # start_transitions.shape: (num_tags,)
+        # tags[0]: (batch_size,) 取出每个序列 在第0个时间步 的tag下标
+        # score.shape = (batch_size,)
+        
+        # 假设 tag[0] = [12, 30, 9, 2, 1]
+        # start_transitions[[12, 30, 9, 2, 1]] = [0.2, 0.3, 0.1, 0.05, 0.0]
+        # 就是通过一个tag下标列表，来获得一个tag转移概率列表，作为初始的转移分数
         score = self.start_transitions[tags[0]]
+        
+        '''
+         score 这么赋值的含义：
+            初始化每个序列的得分为从起始状态转移到其第一个标签的分数。
+        '''
+        
+        # 拿到 每个序列 在第0个时间步 的发射分数（发射到tag[0]中的标签)
         score += emissions[0, torch.arange(batch_size), tags[0]]
+        '''
+            为每个序列的初始得分添加其在第一个时间步的发射分数。
+            完成了路径得分的第一步计算，即初始转移分数加上第一个时间步的发射分数。
+            
+            
+            emissions[0]
+                形状：(batch_size, num_tags)
+                含义：第一个时间步的发射分数，针对每个序列和每个可能的标签。
+            
+            emissions[0, torch.arange(batch_size), tags[0]]
+
+                操作：对于每个序列 i，取出其在时间步 0、标签为 tags[0][i] 的发射分数。
+                索引方式：emissions[时间步, 序列索引, 标签索引]
+                形状：(batch_size,)
+                含义：每个序列在第一个时间步实际标签的发射分数。
+        '''
 
         for i in range(1, seq_length):
+            '''
+            转移得分：
+                从前一个标签转移到当前标签的得分，乘以对应的 mask，确保只在有效位置计算。
+            发射得分：
+                当前标签的发射得分，乘以 mask。
+            '''
+            
             # Transition score to next tag, only added if next timestep is valid (mask == 1)
             # shape: (batch_size,)
+            # mask[i].shape: (batch_size,)
+            # self.transitions.shape: (num_tags, num_tags)
+            # self.transitions[tags[i - 1], tags[i]].shape = (batch_size,)
+            
             score += self.transitions[tags[i - 1], tags[i]] * mask[i]
-
+            # (batch_size, batch_size) x (batch_size, ) = (batch_size, )
+ 
             # Emission score for next tag, only added if next timestep is valid (mask == 1)
-            # shape: (batch_size,)
+            # score.shape: (batch_size,)
+            # mask[i].shape: (batch_size,)
+            # emissions[i, torch.arange(batch_size), tags[i]].shape = (batch_size,)
             score += emissions[i, torch.arange(batch_size), tags[i]] * mask[i]
 
         # End transition score
@@ -210,25 +285,45 @@ class CRF(nn.Module):
         last_tags = tags[seq_ends, torch.arange(batch_size)]
         # shape: (batch_size,)
         score += self.end_transitions[last_tags]
+        
+        '''
+        结束转移得分：
+            从序列最后一个标签转移到结束状态的得分。
+        '''
 
         return score
 
     def _compute_normalizer(
             self, emissions: torch.Tensor, mask: torch.ByteTensor) -> torch.Tensor:
+        '''
+            计算 Z(x)
+        '''
         # emissions: (seq_length, batch_size, num_tags)
         # mask: (seq_length, batch_size)
         assert emissions.dim() == 3 and mask.dim() == 2
         assert emissions.shape[:2] == mask.shape
         assert emissions.size(2) == self.num_tags
-        assert mask[0].all()
+        assert mask[0].all() # 如果mask[0]中的所有值都为真，则断言成立
 
         seq_length = emissions.size(0)
 
-        # Start transition score and first emission; score has size of
+        # Start transition score（转移分数） and first emission; score has size of
         # (batch_size, num_tags) where for each batch, the j-th column stores
         # the score that the first timestep has tag j
+        
+        '''
+        
+        #开始转移分数和首次发射分数，大小为
+
+            #（batch_size，num_tags），
+            # 其中对于每个批次，第j列存储第一个时间步标记为j的分数
+            emissions[0] 存储了每个样本在第一个时间步的 emission 分数 #(batch_size, num_tags)
+        '''
         # shape: (batch_size, num_tags)
-        score = self.start_transitions + emissions[0]
+        # # emissions: (seq_length, batch_size, num_tags)
+        # self.start_transitions.shape = (num_tags,)
+        # 每个样本的开始转移分数都相同
+        score = self.start_transitions + emissions[0] 
 
         for i in range(1, seq_length):
             # Broadcast score for every possible next tag
@@ -340,3 +435,21 @@ class CRF(nn.Module):
             best_tags_list.append(best_tags)
 
         return best_tags_list
+    
+    
+    def _beam_search_decode(self, emissions: torch.Tensor, 
+                            mask: Optional[torch.ByteTensor] = None)-> List[List[int]]:
+        pass
+
+
+
+
+
+if __name__ == '__main__':
+    model = CRF(num_tags=5, batch_first=True)
+    
+    
+    
+
+
+
