@@ -204,6 +204,12 @@ class CRF(nn.Module):
             mask: torch.ByteTensor) -> torch.Tensor:
         '''
          计算路径得分
+         
+         遍历每个时间步， 通过在每轮中累加 emission 和 transition分数 
+         
+         最终得到每个序列的路径分数 
+         
+         return score # score.shape = (batch_size, )
         '''
         # emissions: (seq_length, batch_size, num_tags)
         # tags: (seq_length, batch_size)
@@ -261,6 +267,7 @@ class CRF(nn.Module):
                 从前一个标签转移到当前标签的得分，乘以对应的 mask，确保只在有效位置计算。
             发射得分：
                 当前标签的发射得分，乘以 mask。
+                
             '''
             
             # Transition score to next tag, only added if next timestep is valid (mask == 1)
@@ -279,10 +286,30 @@ class CRF(nn.Module):
             score += emissions[i, torch.arange(batch_size), tags[i]] * mask[i]
 
         # End transition score
+        
+        '''
+            mask.long().sum(dim=0)
+                对 mask 在 dim=0（时间步维度）上求和，计算每个序列的有效长度。
+                形状：(batch_size,)。
+                含义：得到批次中每个序列的长度（即有效时间步的数量）。
+                
+            seq_ends = mask.long().sum(dim=0) - 1
+                对每个序列的长度减去 1，得到最后一个有效时间步的索引。
+                形状：(batch_size,)。
+        '''
         # shape: (batch_size,)
-        seq_ends = mask.long().sum(dim=0) - 1
+        seq_ends = mask.long().sum(dim=0) - 1 # 得到每个序列的 最后一个有效时间步的索引。
         # shape: (batch_size,)
-        last_tags = tags[seq_ends, torch.arange(batch_size)]
+        last_tags = tags[seq_ends, torch.arange(batch_size)] # 批次中每个序列的最后一个有效标签的索引。
+        # 怎么理解：在tags矩阵中，横坐标取了 batch_size 个数， 纵坐标也取了batch_size个数， 一共只取出了batch个值
+        '''
+        示例：
+        对于第 i 个序列：
+        
+        seq_ends[i]：序列 i 的最后一个有效时间步的索引。
+        tags[seq_ends[i], i]：序列 i 在最后一个有效时间步的标签索引。
+        
+        '''
         # shape: (batch_size,)
         score += self.end_transitions[last_tags]
         
@@ -303,7 +330,7 @@ class CRF(nn.Module):
         assert emissions.dim() == 3 and mask.dim() == 2
         assert emissions.shape[:2] == mask.shape
         assert emissions.size(2) == self.num_tags
-        assert mask[0].all() # 如果mask[0]中的所有值都为真，则断言成立
+        assert mask[0].all() # 如果mask[0]中的所有值都为真，则断言成立：所有序列在第一个时间步的掩码都为1
 
         seq_length = emissions.size(0)
 
@@ -322,15 +349,28 @@ class CRF(nn.Module):
         # shape: (batch_size, num_tags)
         # # emissions: (seq_length, batch_size, num_tags)
         # self.start_transitions.shape = (num_tags,)
+        
+        '''
         # 每个样本的开始转移分数都相同
-        score = self.start_transitions + emissions[0] 
+        
+        emission[0]: 每个序列在第一个时间步的发射分数 # (batch_size, num_tags)
+        
+        self.start_transitions + emissions[0] 导致不同形状的矩阵相加，就只能给start_transitions做广播
+
+        相当于把一个 start_transition向量扩展到 长度为 batch_size的矩阵
+        相当于，每个序列在开始节点，都用了相同的转移分数
+        
+        然后就可以  把每个序列在开始节点（第0个时间步）的转移分数+发射分数
+        '''
+        score = self.start_transitions + emissions[0]  #(batch_size, num_tags)
+
 
         for i in range(1, seq_length):
-            # Broadcast score for every possible next tag
+            # Broadcast score for "every" possible next tag
             # shape: (batch_size, num_tags, 1)
             broadcast_score = score.unsqueeze(2)
 
-            # Broadcast emission score for every possible current tag
+            # Broadcast emission score for "every" possible current tag
             # shape: (batch_size, 1, num_tags)
             broadcast_emissions = emissions[i].unsqueeze(1)
 
@@ -339,16 +379,136 @@ class CRF(nn.Module):
             # possible tag sequences so far that end with transitioning from tag i to tag j
             # and emitting
             # shape: (batch_size, num_tags, num_tags)
+            '''
+                self.transitions.shape = (num_tags, num_tags)
+                self.broadcast_score.shape = (batch_size, num_tags, 1)   
+                self.broadcast_emissions.shape = (batch_size, 1, num_tags)
+                
+                由于3者形状不匹配，要对他们进行广播
+                
+                最后他们的形状都变成了：(batch_size, num_tags, num_tags)
+                
+                self.transitions 广播后 = [
+                                        [[0.5, 0.5, 0.5],
+                                        [0.5, 0.5, 0.5],
+                                        [0.5, 0.5, 0.5]],
+                                        
+                                        [[0.5, 0.5, 0.5],
+                                        [0.5, 0.5, 0.5],
+                                        [0.5, 0.5, 0.5]],
+                                        ...      
+                                    ]
+                
+                self.broadcast_score 广播前 = [
+                    [[0.5], [0.2], [0.3]],
+                    [[0.6], [0.1], [0.3]],
+                    ...
+                ]
+                
+                
+                self.broadcast_emissions 广播前= [
+                    [[0.5, 0.4, 0.1]],
+                    
+                    [[0.2, 0.3, 0.5]],
+                    ...
+                ]
+                
+                # broadcast score for every possible next tag
+                self.broadcast_score 广播后 = [
+                        [[0.5, 0.5, 0.5], 
+                        [0.2, 0.2, 0.2],   表示当前序列中 当前tag 和下一个tag之间的转移分数
+                        [0.3, 0.3, 0.3]],   这里相当于为next tag初始化转移分数，这里每个current tag
+                                            转移到所有next tag的转移分数都初始化为相同的。 
+                                            【关键】：列方向值相同
+                        [[0.6, 0.6, 0.6], 
+                        [0.1, 0.1, 0.1], 
+                        [0.3, 0.3, 0.3]],
+                    ...
+                ]
+                
+                # Broadcast emission score for "every" possible current tag
+                self.broadcast_emissions 广播后= [
+                    [[0.5, 0.4, 0.1],
+                     [0.5, 0.4, 0.1],
+                     [0.5, 0.4, 0.1]],     表示当前序列中 当前tag 和下一个tag之间的转移分数
+                                            这里相当于为所有的current tag初始化转移分数，这里每个current tag
+                                            转移到所有next tag的转移分数列表都初始化为相同的。 
+                                            【关键】：行方向值相同
+
+                    [[0.2, 0.3, 0.5],       
+                     [0.2, 0.3, 0.5],
+                     [0.2, 0.3, 0.5]],
+                    ...
+                ]
+                
+                
+                self.transitions 广播后 = [
+                                        [[0.5, 0.5, 0.5],
+                                        [0.5, 0.5, 0.5],
+                                        [0.5, 0.5, 0.5]],
+                                        
+                                        [[0.5, 0.5, 0.5],
+                                        [0.5, 0.5, 0.5],
+                                        [0.5, 0.5, 0.5]],
+                                        ...      
+                                    ]
+                
+
+                
+            '''
+            
+            # shape = (batch_size, num_tags, num_tags)
+            '''
+                总结：
+                    broadcast_score: 每个序列各不相同，同一序列中，列方向相同，行方向不同【current_tag转移到所有next_tag的分数都相同】
+
+                    self.transitions: 每个序列的转移分数都相同，列方向、行方向均不相同
+                    
+                    broadcast_emissions: 每个序列各不相同，同一序列中，列方向不相同，行方向相同【同一个current_tag转移到所有next_tag的分数不相同；
+                                                不同current_tag之间的转移分数列表相同】
+                    
+                    next_score[0] = [[0.5, 0.5, 0.5],
+                                    [0.5, 0.5, 0.5],
+                                    [0.5, 0.5, 0.5]],
+
+                                        +
+                                    [[0.5, 0.5, 0.5],
+                                    [0.2, 0.2, 0.2], 
+                                    [0.3, 0.3, 0.3]],   他是所有current_tag转移到第一个next_tag的分数的广播
+                                    
+                                        +
+                                    [[0.5, 0.4, 0.1],
+                                    [0.5, 0.4, 0.1],   
+                                    [0.5, 0.4, 0.1]],    他是第一个current_tag转移到所有next_tag的分数的广播
+                                    
+                                        =
+                                        
+                                    [[1.5, 1.4, 1.1],
+                                    [1.2, 1.1, 0.8],
+                                    [1.3, 1.2, 0.9]]
+                    
+            '''
             next_score = broadcast_score + self.transitions + broadcast_emissions
 
             # Sum over all possible current tags, but we're in score space, so a sum
-            # becomes a log-sum-exp: for each sample, entry i stores the sum of scores of
+            # becomes a log-sum-exp: 
+            
+            # for each sample, entry i (next_score[j][i] for sequence j) stores the sum of scores of
             # all possible tag sequences so far, that end in tag i
+            '''
+                对于每个样本，条目 i 存储到目前为止所有可能的以标签 i 结尾的序列的分数之和。
+                
+                为啥？因为 next_score 存储了每一个时间步的转移分数和发射分数。
+            '''
             # shape: (batch_size, num_tags)
             next_score = torch.logsumexp(next_score, dim=1)
 
             # Set score to the next score if this timestep is valid (mask == 1)
             # shape: (batch_size, num_tags)
+            # mask[i].shape = (batch_size,)  mask[i] 取了第i个时间步的mask
+            '''
+                更新每个序列在第i个时间步的累积的转移分数+发射分数
+            '''
             score = torch.where(mask[i].unsqueeze(1), next_score, score)
 
         # End transition score
@@ -357,7 +517,11 @@ class CRF(nn.Module):
 
         # Sum (log-sum-exp) over all possible tags
         # shape: (batch_size,)
-        return torch.logsumexp(score, dim=1)
+
+        # \logexp(x1, x2,..., xn) = log(\sum_{i=1}^{n}(exp(xi)))
+        # 这个函数常被用于处理数值稳定性的问题，特别是在处理概率的对数空间时，
+        # 因为直接在对数空间计算(log(\sum(xi)))和会导致数值溢出(xi太小了)的风险。
+        return torch.logsumexp(score, dim=1) # shape = (batch_size,)
 
     def _viterbi_decode(self, emissions: torch.FloatTensor,
                         mask: torch.ByteTensor) -> List[List[int]]:
@@ -414,7 +578,7 @@ class CRF(nn.Module):
 
         # Now, compute the best path for each sample
 
-        # shape: (batch_size,)
+        # shape: (batch_size,) # 每个序列的真实序列长度-1， 相当于
         seq_ends = mask.long().sum(dim=0) - 1
         best_tags_list = []
 
@@ -446,9 +610,36 @@ class CRF(nn.Module):
 
 
 if __name__ == '__main__':
-    model = CRF(num_tags=5, batch_first=True)
+    # model = CRF(num_tags=5, batch_first=True)
     
-    
+      # 设置随机种子以获得可重复的结果  
+    torch.manual_seed(1)  
+
+    # 定义参数  
+    BATCH_SIZE = 2  
+    SEQ_LENGTH = 5  
+    NUM_TAGS = 3  
+    FEATURE_DIM = 4  # 发射分数的特征维度  
+
+    # 创建随机的发射分数（通常来自于上一层，如 BiLSTM）  
+    emissions = torch.randn(BATCH_SIZE, SEQ_LENGTH, NUM_TAGS)  
+    # 随机生成标签序列  
+    tags = torch.randint(NUM_TAGS, (BATCH_SIZE, SEQ_LENGTH), dtype=torch.long)  
+    # 创建掩码，假设所有序列都是完整的（没有填充）  
+    mask = torch.ones(BATCH_SIZE, SEQ_LENGTH, dtype=torch.uint8)  
+
+    # 初始化 CRF 模型  
+    model = CRF(num_tags=NUM_TAGS, batch_first=True)  
+
+    # 计算对数似然损失，并取负数（因为我们通常最小化损失）  
+    loss = -model.forward(emissions, tags, mask=mask)  
+    print(f'Negative log-likelihood loss: {loss.item()}')  
+
+    # 使用维特比算法解码最可能的标签序列  
+    best_tag_sequences = model.decode(emissions, mask=mask)  
+    print('Best tag sequences:')  
+    for seq in best_tag_sequences:  
+        print(seq)  
     
 
 
